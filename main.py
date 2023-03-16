@@ -110,10 +110,12 @@ class Array:
         return self.move(-self.current_index)
 
     def debug_message(self, message):
+        """A print that only gets executed in debug mode"""
         if self.debug:
             print(message)
 
     def sorted(self):
+        """Returns if array is sorted"""
         while self.current_index < self.length - 1:
             if self.compare_current_next():
                 return False
@@ -125,6 +127,7 @@ class Array:
         self.debug_message("Shuffled")
 
     def GnomeSort(self):
+        """https://en.wikipedia.org/wiki/Gnome_sort"""
         self.move_to_start()
         while self.current_index < self.length-1:
             if self.compare_current_next():
@@ -134,6 +137,7 @@ class Array:
                 self.move_right()
 
     def BubbleSort(self):
+        """https://en.wikipedia.org/wiki/Bubble_sort"""
         swapped = True
         while swapped:
             swapped = False
@@ -145,10 +149,12 @@ class Array:
                 self.move_right()
 
     def MiracleSort(self):
+        """https://en.wikipedia.org/wiki/Bogosort#Related_algorithms"""
         while not self.sorted():
             sleep(1)
 
     def BogoSort(self):
+        """https://en.wikipedia.org/wiki/Bogosort"""
         while not self.sorted():
             self.shuffle()
 

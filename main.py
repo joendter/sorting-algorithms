@@ -1,11 +1,11 @@
 from enum import Enum
-import pygame
+#import pygame
 import sys
-pygame.init()
+#pygame.init()
 
 size = width, height = 256, 256
 
-screen = pygame.display.set_mode(size)
+#screen = pygame.display.set_mode(size)
 
 
 class FileMode(Enum):
@@ -40,6 +40,7 @@ class Array:
         self.current_index: int = 0
         self.fromFile(**kwargs)
         self.length: int = len(self.data)
+        self.debug = True
 
 
     def fromFile(self, filepath: str, mode=FileMode.DECIMAL, sep: str = ",") -> bool:
@@ -64,21 +65,63 @@ class Array:
                 self.mode = DataMode.STRING
                 return True
 
-    def compare(self, idx1:int, idx2:int):
+    def compare(self, idx1: int, idx2: int):
         return compare_values(self.data[idx1], self.data[idx2], mode=self.mode)
 
-    def swap(self, idx1:int, idx2:int):
+    def compare_adjacent(self, idx: int):
+        return self.compare(idx, idx+1)
+
+    def compare_current_next(self):
+        return self.compare_adjacent(self.current_index)
+
+    def swap(self, idx1: int, idx2: int):
         temp = self.data[idx1]
         self.data[idx1] = self.data[idx2]
         self.data[idx2] = temp
 
+    def swap_adjacent(self, idx: int):
+        self.swap(idx, idx + 1)
+
+    def swap_current_next(self):
+        self.swap_adjacent(self.current_index)
+
+    def move(self, delta_index: int) -> bool:
+        if -delta_index <= self.current_index and self.current_index + delta_index < self.length:
+            self.current_index += delta_index
+            self.debug_message(f"New index {self.current_index}")
+            return True
+        return False
+
+    def move_right(self):
+        return self.move(1)
+
+    def move_left(self):
+        return self.move(-1)
+
+    def debug_message(self, message):
+        if self.debug:
+            print(message)
+
+    def GnomeSort(self):
+        self.current_index = 0
+        while self.current_index < self.length-1:
+            if self.compare_current_next():
+                self.swap_current_next()
+                self.move_left()
+            else:
+                self.move_right()
 
 
 
-a = Array(filepath="testdata1.txt")
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit()
-            
+
+a = Array(filepath="testdata3.txt")
+
+a.GnomeSort()
+print(a.data)
+#
+# while True:
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             sys.exit()
+#

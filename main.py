@@ -1,4 +1,11 @@
 from enum import Enum
+import pygame
+import sys
+pygame.init()
+
+size = width, height = 256, 256
+
+screen = pygame.display.set_mode(size)
 
 
 class FileMode(Enum):
@@ -26,6 +33,15 @@ def compare_values(value1, value2, mode) -> bool:
 
 class Array:
 
+    def __init__(self, **kwargs):
+        """Currently just a mask for from file"""
+        self.data = []
+        self.mode = DataMode.INTEGER
+        self.current_index: int = 0
+        self.fromFile(**kwargs)
+        self.length: int = len(self.data)
+
+
     def fromFile(self, filepath: str, mode=FileMode.DECIMAL, sep: str = ",") -> bool:
         """ Function that loads an array from file;
             """
@@ -48,15 +64,21 @@ class Array:
                 self.mode = DataMode.STRING
                 return True
 
-    def __init__(self, **kwargs):
-        """Currently just a mask for from file"""
-        self.data = []
-        self.mode = DataMode.INTEGER
-        self.current_index: int = 0
-        self.fromFile(**kwargs)
-
-    def compare(self, idx1, idx2):
+    def compare(self, idx1:int, idx2:int):
         return compare_values(self.data[idx1], self.data[idx2], mode=self.mode)
+
+    def swap(self, idx1:int, idx2:int):
+        temp = self.data[idx1]
+        self.data[idx1] = self.data[idx2]
+        self.data[idx2] = temp
+
+
 
 
 a = Array(filepath="testdata1.txt")
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+            

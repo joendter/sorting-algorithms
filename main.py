@@ -111,6 +111,13 @@ class Array:
         if self.debug:
             print(message)
 
+    def sorted(self):
+        while self.current_index < self.length - 1:
+            if self.compare_current_next():
+                return False
+            self.move_right()
+        return True
+
     def GnomeSort(self):
         self.move_to_start()
         while self.current_index < self.length-1:

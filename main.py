@@ -1,7 +1,9 @@
 from enum import Enum
+from time import sleep
 #import pygame
 import sys
 #pygame.init()
+import random
 
 size = width, height = 256, 256
 
@@ -77,7 +79,7 @@ class Array:
     def compare_current_next(self):
         return self.compare_adjacent(self.current_index)
 
-    def swap(self, idx1: int, idx2: int):
+    def swap(self, idx1: int, idx2: int):  # elementary
         temp = self.data[idx1]
         self.data[idx1] = self.data[idx2]
         self.data[idx2] = temp
@@ -89,7 +91,7 @@ class Array:
     def swap_current_next(self):
         self.swap_adjacent(self.current_index)
 
-    def move(self, delta_index: int) -> bool:
+    def move(self, delta_index: int) -> bool:  # elementary
         if self.valid_index(self.current_index + delta_index):
             self.current_index += delta_index
             self.debug_message(f"New index {self.current_index}")
@@ -118,6 +120,10 @@ class Array:
             self.move_right()
         return True
 
+    def shuffle(self):
+        random.shuffle(self.data)
+        self.debug_message("Shuffled")
+
     def GnomeSort(self):
         self.move_to_start()
         while self.current_index < self.length-1:
@@ -138,16 +144,18 @@ class Array:
                     swapped = True
                 self.move_right()
 
+    def MiracleSort(self):
+        while not self.sorted():
+            sleep(1)
+
+    def BogoSort(self):
+        while not self.sorted():
+            self.shuffle()
 
 
+a = Array(filepath="testdata1.txt")
 
-
-
-
-
-a = Array(filepath="testdata3.txt")
-
-a.BubbleSort()
+a.BogoSort()
 print(a.data)
 #
 # while True:

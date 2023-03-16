@@ -65,6 +65,9 @@ class Array:
                 self.mode = DataMode.STRING
                 return True
 
+    def valid_index(self, index: int) -> bool:
+        return 0 <= index < self.length
+
     def compare(self, idx1: int, idx2: int):
         return compare_values(self.data[idx1], self.data[idx2], mode=self.mode)
 
@@ -78,6 +81,7 @@ class Array:
         temp = self.data[idx1]
         self.data[idx1] = self.data[idx2]
         self.data[idx2] = temp
+        self.debug_message(f"Swapped index {idx1} with index {idx2}")
 
     def swap_adjacent(self, idx: int):
         self.swap(idx, idx + 1)
@@ -86,24 +90,29 @@ class Array:
         self.swap_adjacent(self.current_index)
 
     def move(self, delta_index: int) -> bool:
-        if -delta_index <= self.current_index and self.current_index + delta_index < self.length:
+        if self.valid_index(self.current_index + delta_index):
             self.current_index += delta_index
             self.debug_message(f"New index {self.current_index}")
             return True
         return False
 
     def move_right(self):
+        self.debug_message("Moved right")
         return self.move(1)
 
     def move_left(self):
+        self.debug_message("Moved left")
         return self.move(-1)
+
+    def move_to_start(self):
+        return self.move(-self.current_index)
 
     def debug_message(self, message):
         if self.debug:
             print(message)
 
     def GnomeSort(self):
-        self.current_index = 0
+        self.move_to_start()
         while self.current_index < self.length-1:
             if self.compare_current_next():
                 self.swap_current_next()
@@ -111,13 +120,27 @@ class Array:
             else:
                 self.move_right()
 
+    def BubbleSort(self):
+        swapped = True
+        while swapped:
+            swapped = False
+            self.move_to_start()
+            while self.current_index < self.length - 1:
+                if self.compare_current_next():
+                    self.swap_current_next()
+                    swapped = True
+                self.move_right()
+
+
+
+
 
 
 
 
 a = Array(filepath="testdata3.txt")
 
-a.GnomeSort()
+a.BubbleSort()
 print(a.data)
 #
 # while True:

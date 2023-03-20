@@ -1,9 +1,11 @@
 from enum import Enum
-from time import sleep
-#import pygame
+import time
+import pygame
 import sys
-#pygame.init()
 import random
+
+
+#pygame.init()
 
 size = width, height = 256, 256
 
@@ -33,6 +35,13 @@ def compare_values(value1, value2, mode) -> bool:
         return int(value1, 36) > int(value2, 36)
 
 
+class Element(pygame.sprite.Sprite):
+    def __int__(self, value, size: (int, int)):
+        super(Element, self).__init__()
+        self.surf = pygame.Surface(size)
+        self.rect = self.surf.get_rect()
+
+
 class Array:
 
     def __init__(self, **kwargs):
@@ -43,7 +52,7 @@ class Array:
         self.fromFile(**kwargs)
         self.length: int = len(self.data)
         self.debug = True
-
+        self.t0 = time.time()
 
     def fromFile(self, filepath: str, mode=FileMode.DECIMAL, sep: str = ",") -> bool:
         """ Function that loads an array from file;
@@ -79,6 +88,9 @@ class Array:
     def compare_current_next(self):
         return self.compare_adjacent(self.current_index)
 
+    def compare_current(self, idx: int):
+        return self.compare(self.current_index, idx)
+
     def swap(self, idx1: int, idx2: int):  # elementary
         temp = self.data[idx1]
         self.data[idx1] = self.data[idx2]
@@ -106,20 +118,37 @@ class Array:
         self.debug_message("Moved left")
         return self.move(-1)
 
+    def move_to(self, index):
+        if self.valid_index(index):
+            self.current_index = index
+            self.debug_message(f"New index {self.current_index}")
+            return True
+        return False
+
     def move_to_start(self):
-        return self.move(-self.current_index)
+        return self.move_to(0)
 
     def debug_message(self, message):
         """A print that only gets executed in debug mode"""
         if self.debug:
             print(message)
 
+    def start_timer(self):
+        self.t0 = time.time()
+
+    def read_timer(self) -> float:
+        return time.time()-self.t0
+
     def sorted(self):
         """Returns if array is sorted"""
+        self.debug_message("Checking if sorted")
+        self.move_to_start()
         while self.current_index < self.length - 1:
             if self.compare_current_next():
+                self.debug_message("Is sorted")
                 return False
             self.move_right()
+        self.debug_message("Is not sorted")
         return True
 
     def shuffle(self):
@@ -151,17 +180,31 @@ class Array:
     def MiracleSort(self):
         """https://en.wikipedia.org/wiki/Bogosort#Related_algorithms"""
         while not self.sorted():
-            sleep(1)
+            time.sleep(1)
 
     def BogoSort(self):
         """https://en.wikipedia.org/wiki/Bogosort"""
         while not self.sorted():
             self.shuffle()
 
+    def SelectionSort(self):
+        """https://en.wikipedia.org/wiki/Selection_sort"""
+        sorted_until = 0
+        while not self.sorted():
+            minimum_index = sorted_until
+            self.move_to(sorted_until)
+            while self.current_index < self.length - 1:
+                self.move_right()
+                if not self.compare_current(minimum_index):
+                    minimum_index = self.current_index
+            self.swap(minimum_index, sorted_until)
+            sorted_until += 1
+
+
 
 a = Array(filepath="testdata1.txt")
 
-a.BogoSort()
+a.SelectionSort()
 print(a.data)
 #
 # while True:

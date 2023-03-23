@@ -5,11 +5,11 @@ import sys
 import random
 
 
-#pygame.init()
+pygame.init()
 
 size = width, height = 256, 256
 
-#screen = pygame.display.set_mode(size)
+screen = pygame.display.set_mode(size)
 
 
 class FileMode(Enum):
@@ -36,23 +36,33 @@ def compare_values(value1, value2, mode) -> bool:
 
 
 class Element(pygame.sprite.Sprite):
-    def __int__(self, value, size: (int, int)):
+    def __init__(self, value, size: (int, int)):
         super(Element, self).__init__()
+        width, height = size
         self.surf = pygame.Surface(size)
         self.rect = self.surf.get_rect()
+        pygame.draw.rect(self.surf, (255, 255, 255), (0, 0, width, height),1)
+        self.font = pygame.font.Font(None, int(size[1]*0.95))
+        text = pygame.transform.rotate(self.font.render(str(value), False, (255, 255, 255)), -90)
+        self.surf.blit(text, (int(width*0.05) + 1, int(height*0.05) + 1))
 
 
 class Array:
 
-    def __init__(self, **kwargs):
+    def __init__(self, debug: bool = True, **kwargs):
         """Currently just a mask for from file"""
         self.data = []
         self.mode = DataMode.INTEGER
         self.current_index: int = 0
         self.fromFile(**kwargs)
         self.length: int = len(self.data)
-        self.debug = True
-        self.t0 = time.time()
+        self.debug: bool = debug
+        self.t0: float = time.time()
+        self.costs: {str: int} = {"move": 1,
+                                  "swap": 1,
+                                  "shuffle": 1,
+                                  "compare": 1
+                                  }
 
     def fromFile(self, filepath: str, mode=FileMode.DECIMAL, sep: str = ",") -> bool:
         """ Function that loads an array from file;
@@ -104,28 +114,24 @@ class Array:
         self.swap_adjacent(self.current_index)
 
     def move(self, delta_index: int) -> bool:  # elementary
-        if self.valid_index(self.current_index + delta_index):
-            self.current_index += delta_index
-            self.debug_message(f"New index {self.current_index}")
-            return True
-        return False
+        return self.move_to(self.current_index + delta_index)
 
-    def move_right(self):
+    def move_right(self) -> bool:
         self.debug_message("Moved right")
         return self.move(1)
 
-    def move_left(self):
+    def move_left(self) -> bool:
         self.debug_message("Moved left")
         return self.move(-1)
 
-    def move_to(self, index):
+    def move_to(self, index: int) -> bool:  # elementary
         if self.valid_index(index):
             self.current_index = index
             self.debug_message(f"New index {self.current_index}")
             return True
         return False
 
-    def move_to_start(self):
+    def move_to_start(self) -> bool:
         return self.move_to(0)
 
     def debug_message(self, message):
@@ -151,7 +157,7 @@ class Array:
         self.debug_message("Is not sorted")
         return True
 
-    def shuffle(self):
+    def shuffle(self): # elementary
         random.shuffle(self.data)
         self.debug_message("Shuffled")
 
@@ -193,22 +199,34 @@ class Array:
         while not self.sorted():
             minimum_index = sorted_until
             self.move_to(sorted_until)
-            while self.current_index < self.length - 1:
-                self.move_right()
+            while self.move_right():
                 if not self.compare_current(minimum_index):
                     minimum_index = self.current_index
             self.swap(minimum_index, sorted_until)
             sorted_until += 1
 
 
-
 a = Array(filepath="testdata1.txt")
 
 a.SelectionSort()
 print(a.data)
-#
-# while True:
-#     for event in pygame.event.get():
-#         if event.type == pygame.QUIT:
-#             sys.exit()
-#
+
+
+b = Array(False, filepath="testdata3.txt")
+b.start_timer()
+b.GnomeSort()
+print(b.read_timer())
+b.fromFile("testdata3.txt")
+b.start_timer()
+b.SelectionSort()
+print(b.read_timer())
+
+
+# screen =pygame.Surface(size)
+tmpelement = Element(10, (20,20))
+screen.blit(tmpelement.surf, (10,10))
+pygame.display.update()
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()

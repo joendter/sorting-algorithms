@@ -11,7 +11,7 @@ def integers(filename: str, size: int, intrange: (int, int) = (0,100), sep: str 
         file.write(result)
 
 
-#integers("testdata4.txt", 128)
+integers("testdata5.txt", 10)
 
 def strings(filename: str, size: int, length_per_string: int = 3, sep: str = ","):
     chars = list(string.digits + string.ascii_uppercase)

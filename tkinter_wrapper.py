@@ -3,13 +3,6 @@ from tkinter import filedialog
 import os
 import webbrowser
 import main
-import multiprocessing
-
-
-def exec_thread():
-    t1 = multiprocessing.Process(target=execute_code())
-    t1.start()
-    print("thread started")
 
 
 def execute_code():
@@ -18,8 +11,7 @@ def execute_code():
                                            defaultextension=".txt", initialdir=os.getcwd())
     print(file_path)
     if file_path == "":
-        print("You didn't select a file :(")
-        return
+        file_path = "testdata1.txt"
     if not main.Array.fromFile(main.debugarray,filepath=file_path):
         return
     if selected_option == 1:

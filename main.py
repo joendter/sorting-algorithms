@@ -1,18 +1,17 @@
 from enum import Enum
 import time
 import pygame
-import sys
 import random
-import copy
-from pygame._sdl2 import Window, Texture, Image, Renderer, get_drivers, messagebox
-import threading
 import re
+import os
 
 
 pygame.init()
 
 size = width, height = 256, 256
-
+x_pos = 30
+y_pos = 30
+os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x_pos,y_pos)
 screen = pygame.display.set_mode(size)
 
 

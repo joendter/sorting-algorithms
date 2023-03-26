@@ -3,6 +3,8 @@ import time
 import pygame
 import sys
 import random
+import copy
+from pygame._sdl2 import Window, Texture, Image, Renderer, get_drivers, messagebox
 
 
 pygame.init()
@@ -36,20 +38,29 @@ def compare_values(value1, value2, mode) -> bool:
 
 
 class Element(pygame.sprite.Sprite):
-    def __init__(self, value, size: (int, int)):
+    def __init__(self, value, size: (int, int), location: (int, int) = (0,0)):
         super(Element, self).__init__()
+        self.value = value
         width, height = size
+        self.size = size
+        self.location = location
         self.surf = pygame.Surface(size)
         self.rect = self.surf.get_rect()
         pygame.draw.rect(self.surf, (255, 255, 255), (0, 0, width, height),1)
-        self.font = pygame.font.Font(None, int(size[1]*0.95))
-        text = pygame.transform.rotate(self.font.render(str(value), False, (255, 255, 255)), -90)
+        font = pygame.font.Font(None, int(size[1]*0.95))
+        text = pygame.transform.rotate(font.render(str(value), False, (255, 255, 255)), -90)
         self.surf.blit(text, (int(width*0.05) + 1, int(height*0.05) + 1))
+
+    def move_to(self, location: (int, int)):
+        self.location = location
+
+    def move(self, dx = 0, dy = 0):
+        self.move_to((self.location[0] + dx, self.location[1] + dy))
 
 
 class Array:
 
-    def __init__(self, debug: bool = True, **kwargs):
+    def __init__(self, debug: bool = True, animated: bool = True, **kwargs):
         """Currently just a mask for from file"""
         self.data = []
         self.mode = DataMode.INTEGER
@@ -63,6 +74,38 @@ class Array:
                                   "shuffle": 1,
                                   "compare": 1
                                   }
+        self.dimensions = (555, 555)
+        self.animated = animated
+        if self.animated:
+            self.initialise_pygame()
+
+    def initialise_pygame(self):
+        self.window = Window(title="array", size=self.dimensions)
+        self.renderer = Renderer(self.window)
+        self.surface = pygame.Surface(self.dimensions)
+        self.pygame_objects = []
+        object_size = (self.dimensions[0]//self.length, 50)
+        self.pointy_thingy = pygame.Surface((40,40), pygame.SRCALPHA)
+        self.pointy_thingy.fill((255,255,255,0))
+        points = [(0, 0), (20, 40), (40, 0)]
+        pygame.draw.polygon(self.pointy_thingy, (255, 0, 0), points)
+        for index in range(self.length):
+            self.pygame_objects.append(Element(self.get_value(index), object_size, (index*(object_size[0]+1), self.dimensions[1]//2)))
+        pygame.display.update()
+
+    def update_screen(self):
+        Texture.from_surface(self.renderer, self.surface).draw()
+        self.renderer.present()
+
+    def draw_objects_on_surface(self):
+        self.surface.fill((0, 0, 0))
+        for obj in self.pygame_objects:
+            self.surface.blit(obj.surf, obj.location)
+        self.surface.blit(self.pointy_thingy, ((self.current_index + 0.5)*self.pygame_objects[0].size[0] - 20, 10))
+
+    def draw_and_update(self):
+        self.draw_objects_on_surface()
+        self.update_screen()
 
     def fromFile(self, filepath: str, mode=FileMode.DECIMAL, sep: str = ",") -> bool:
         """ Function that loads an array from file;
@@ -89,8 +132,31 @@ class Array:
     def valid_index(self, index: int) -> bool:
         return 0 <= index < self.length
 
-    def compare(self, idx1: int, idx2: int):
-        return compare_values(self.data[idx1], self.data[idx2], mode=self.mode)
+    def get_value(self, index: int):
+        return self.data[index]
+
+    def get_current_value(self):
+        return self.get_value(self.current_index)
+
+    def compare(self, idx1: int, idx2: int):  # elementary
+        result = compare_values(self.data[idx1], self.data[idx2], mode=self.mode)
+        self.compare_animation(idx1, idx2, result)
+        return result
+
+    def compare_animation(self, idx1: int, idx2: int, result: bool) -> bool:
+        if not self.animated:
+            return False
+        self.draw_objects_on_surface()
+        dimensions = (self.pygame_objects[idx1].size[0], self.dimensions[1])
+        tmp = pygame.Surface(dimensions)
+        tmp.fill((255, 255, 255))
+        tmp.set_alpha(40)
+        self.surface.blit(tmp, (self.pygame_objects[idx1].location[0], 0))
+        self.surface.blit(tmp, (self.pygame_objects[idx2].location[0], 0))
+        #del tmp
+        self.update_screen()
+        time.sleep(self.costs["compare"])
+        return True
 
     def compare_adjacent(self, idx: int):
         return self.compare(idx, idx+1)
@@ -102,10 +168,47 @@ class Array:
         return self.compare(self.current_index, idx)
 
     def swap(self, idx1: int, idx2: int):  # elementary
+        self.debug_message(f"Swapped index {idx1} with index {idx2}")
+        if idx1 == idx2:
+            return None
         temp = self.data[idx1]
         self.data[idx1] = self.data[idx2]
         self.data[idx2] = temp
-        self.debug_message(f"Swapped index {idx1} with index {idx2}")
+        self.swap_animation(idx1, idx2)
+
+    def swap_animation(self, idx1: int, idx2: int):
+        if not self.animated:
+            return False
+        obj1 = self.pygame_objects[idx1]
+        obj2 = self.pygame_objects[idx2]
+        x1 = obj1.location[0]
+        x2 = obj2.location[0]
+        delta_x = -(obj1.location[0] - obj2.location[0])//32
+        delta_y = (obj1.size[1] + 10)//16
+        delta_t = self.costs["swap"]/64
+        for i in range(16):  # rising
+            obj1.move(dy=delta_y)
+            obj2.move(dy=-delta_y)
+            self.draw_and_update()
+            time.sleep(delta_t)
+
+        for i in range(32):  # x-movement
+            obj1.move(dx=delta_x)
+            obj2.move(dx=-delta_x)
+            self.draw_and_update()
+            time.sleep(delta_t)
+        obj1.move(dx=x2-obj1.location[0])
+        obj2.move(dx=x1-obj2.location[0])
+
+        for i in range(16):  # falling
+            obj1.move(dy=-delta_y)
+            obj2.move(dy=delta_y)
+            self.draw_and_update()
+            time.sleep(delta_t)
+
+        #tmp = copy.deepcopy(self.pygame_objects[idx1])
+        self.pygame_objects[idx1] = obj2
+        self.pygame_objects[idx2] = obj1
 
     def swap_adjacent(self, idx: int):
         self.swap(idx, idx + 1)
@@ -113,7 +216,7 @@ class Array:
     def swap_current_next(self):
         self.swap_adjacent(self.current_index)
 
-    def move(self, delta_index: int) -> bool:  # elementary
+    def move(self, delta_index: int) -> bool:
         return self.move_to(self.current_index + delta_index)
 
     def move_right(self) -> bool:
@@ -129,6 +232,8 @@ class Array:
             self.current_index = index
             self.debug_message(f"New index {self.current_index}")
             return True
+        if self.animated:
+            self.draw_and_update()
         return False
 
     def move_to_start(self) -> bool:
@@ -151,10 +256,10 @@ class Array:
         self.move_to_start()
         while self.current_index < self.length - 1:
             if self.compare_current_next():
-                self.debug_message("Is sorted")
+                self.debug_message("Is not sorted")
                 return False
             self.move_right()
-        self.debug_message("Is not sorted")
+        self.debug_message("Is sorted")
         return True
 
     def shuffle(self): # elementary
@@ -186,7 +291,7 @@ class Array:
     def MiracleSort(self):
         """https://en.wikipedia.org/wiki/Bogosort#Related_algorithms"""
         while not self.sorted():
-            time.sleep(1)
+            time.sleep(1/random.random())
 
     def BogoSort(self):
         """https://en.wikipedia.org/wiki/Bogosort"""
@@ -208,25 +313,36 @@ class Array:
 
 a = Array(filepath="testdata1.txt")
 
-a.SelectionSort()
+# aa = pygame.Surface((123,123))
+# aa.fill((123,33,222))
+#
+
+a.update_screen()
+for idx1 in range(a.length):
+    for idx2 in range(a.length):
+        a.swap(idx1, idx2)
+#a.compare(1,3)
+#a.swap_animation(1,3)
+#a.SelectionSort()
 print(a.data)
 
 
-b = Array(False, filepath="testdata3.txt")
-b.start_timer()
-b.GnomeSort()
-print(b.read_timer())
-b.fromFile("testdata3.txt")
-b.start_timer()
-b.SelectionSort()
-print(b.read_timer())
-
+# b = Array(False, filepath="testdata3.txt")
+# b.start_timer()
+# b.GnomeSort()
+# print(b.read_timer())
+# b.fromFile("testdata3.txt")
+# b.start_timer()
+# b.SelectionSort()
+# print(b.read_timer())
+#
 
 # screen =pygame.Surface(size)
-tmpelement = Element(10, (20,20))
-screen.blit(tmpelement.surf, (10,10))
-pygame.display.update()
+# tmpelement = Element(10, (20,20))
+# screen.blit(tmpelement.surf, (10,10))
+# pygame.display.update()
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            pygame.quit()
             sys.exit()

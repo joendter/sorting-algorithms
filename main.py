@@ -65,23 +65,23 @@ class Array:
     def __init__(self, debug: bool = True, animated: bool = True, **kwargs):
         """Currently just a mask for from file"""
         self.data = []
+        self.debug: bool = debug
         self.mode = DataMode.INTEGER
         self.current_index: int = 0
-        if self.fromFile(**kwargs):
-            self.length: int = len(self.data)
-            self.debug: bool = debug
-            self.t0: float = time.time()
-            self.costs: {str: int} = {"move": 1,
-                                      "swap": 1,
-                                      "shuffle": 1,
-                                      "compare": 1
-                                      }
-            self.dimensions = (1024, 700)
-            self.animated = animated
-            if self.animated:
-                self.initialise_pygame()
-        else:
-            exit()
+        self.fromFile(**kwargs)
+        self.length: int = len(self.data)
+
+        self.t0: float = time.time()
+        self.costs: {str: int} = {"move": 0.3,
+                                  "swap": 0.5,
+                                  "shuffle": 1,
+                                  "compare": 0.3
+                                  }
+        self.dimensions = (1024, 700)
+        self.animated = animated
+        if self.animated:
+            self.initialise_pygame()
+
 
     def initialise_pygame(self):
         self.window = Window(title="array", size=self.dimensions)
@@ -123,8 +123,9 @@ class Array:
             # Import file as list of decimal numbers
             with open(filepath, "r") as file:
                 file_contents = file.read()
-                if re.match(rf'(^\d{sep})*\d$', file_contents):
+                if re.match(rf'^((\d)+{sep})*(\d)+$', file_contents):
                     self.data = list(map(int, file_contents.split(sep=sep)))
+                    self.debug_message(self.data)
                     self.mode = DataMode.INTEGER
                     return True
                 else:
@@ -135,7 +136,7 @@ class Array:
             # Import file as list of strings
             with open(filepath, "r") as file:
                 file_contents = file.read()
-                if re.match(rf'(^[\da-zA-Z]{sep})*[\da-zA-Z]$', file_contents):
+                if re.match(rf'^([\da-zA-Z]+{sep})*[\da-zA-Z]+$', file_contents):
                     self.data = file.read().split(sep=sep)
                     self.mode = DataMode.STRING
                     return True
@@ -275,8 +276,12 @@ class Array:
         self.debug_message("Is sorted")
         return True
 
-    def shuffle(self): # elementary
-        random.shuffle(self.data)
+    def random_index(self):
+        return random.randint(0, self.length-1)
+
+    def shuffle(self, depth: int = 10):  # elementary
+        for i in range(depth):
+            self.swap(self.random_index(), self.random_index())
         self.debug_message("Shuffled")
 
     def GnomeSort(self):
@@ -336,6 +341,9 @@ def example_sort(algorithm=0, datapath="testdata5.txt"):
         a.MiracleSort()
     if algorithm == 4:
         a.BogoSort()
+
+
+debugarray = Array(animated=False,filepath="testdata5.txt")
 
 #
 # t1 = threading.Thread(target=example_sort())

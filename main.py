@@ -5,6 +5,8 @@ import sys
 import random
 import copy
 from pygame._sdl2 import Window, Texture, Image, Renderer, get_drivers, messagebox
+import threading
+import re
 
 
 pygame.init()
@@ -47,11 +49,11 @@ class Element(pygame.sprite.Sprite):
         self.surf = pygame.Surface(size)
         self.rect = self.surf.get_rect()
         pygame.draw.rect(self.surf, (255, 255, 255), (0, 0, width, height),1)
-        font = pygame.font.Font(None, int(size[1]*0.95))
+        font = pygame.font.Font(None, int(size[0]*0.95))
         text = pygame.transform.rotate(font.render(str(value), False, (255, 255, 255)), -90)
         self.surf.blit(text, (int(width*0.05) + 1, int(height*0.05) + 1))
 
-    def move_to(self, location: (int, int)):
+    def move_to(self, location):
         self.location = location
 
     def move(self, dx = 0, dy = 0):
@@ -65,32 +67,34 @@ class Array:
         self.data = []
         self.mode = DataMode.INTEGER
         self.current_index: int = 0
-        self.fromFile(**kwargs)
-        self.length: int = len(self.data)
-        self.debug: bool = debug
-        self.t0: float = time.time()
-        self.costs: {str: int} = {"move": 1,
-                                  "swap": 1,
-                                  "shuffle": 1,
-                                  "compare": 1
-                                  }
-        self.dimensions = (555, 555)
-        self.animated = animated
-        if self.animated:
-            self.initialise_pygame()
+        if self.fromFile(**kwargs):
+            self.length: int = len(self.data)
+            self.debug: bool = debug
+            self.t0: float = time.time()
+            self.costs: {str: int} = {"move": 1,
+                                      "swap": 1,
+                                      "shuffle": 1,
+                                      "compare": 1
+                                      }
+            self.dimensions = (1024, 700)
+            self.animated = animated
+            if self.animated:
+                self.initialise_pygame()
+        else:
+            exit()
 
     def initialise_pygame(self):
         self.window = Window(title="array", size=self.dimensions)
         self.renderer = Renderer(self.window)
         self.surface = pygame.Surface(self.dimensions)
         self.pygame_objects = []
-        object_size = (self.dimensions[0]//self.length, 50)
+        object_size = (self.dimensions[0]//self.length, self.dimensions[1]//4)
         self.pointy_thingy = pygame.Surface((40,40), pygame.SRCALPHA)
         self.pointy_thingy.fill((255,255,255,0))
         points = [(0, 0), (20, 40), (40, 0)]
         pygame.draw.polygon(self.pointy_thingy, (255, 0, 0), points)
         for index in range(self.length):
-            self.pygame_objects.append(Element(self.get_value(index), object_size, (index*(object_size[0]+1), self.dimensions[1]//2)))
+            self.pygame_objects.append(Element(self.get_value(index), object_size, (index*(object_size[0]+1), self.dimensions[1]//3)))
         pygame.display.update()
 
     def update_screen(self):
@@ -118,16 +122,25 @@ class Array:
         if mode == FileMode.DECIMAL:
             # Import file as list of decimal numbers
             with open(filepath, "r") as file:
-                self.data = list(map(int, file.read().split(sep=sep)))
-                self.mode = DataMode.INTEGER
-                return True
+                file_contents = file.read()
+                if re.match(rf'(^\d{sep})*\d$', file_contents):
+                    self.data = list(map(int, file_contents.split(sep=sep)))
+                    self.mode = DataMode.INTEGER
+                    return True
+                else:
+                    print("invalid file data")
+                    return False
 
         if mode == FileMode.STRING:
             # Import file as list of strings
             with open(filepath, "r") as file:
-                self.data = file.read().split(sep=sep)
-                self.mode = DataMode.STRING
-                return True
+                file_contents = file.read()
+                if re.match(rf'(^[\da-zA-Z]{sep})*[\da-zA-Z]$', file_contents):
+                    self.data = file.read().split(sep=sep)
+                    self.mode = DataMode.STRING
+                    return True
+                else:
+                    return False
 
     def valid_index(self, index: int) -> bool:
         return 0 <= index < self.length
@@ -183,8 +196,8 @@ class Array:
         obj2 = self.pygame_objects[idx2]
         x1 = obj1.location[0]
         x2 = obj2.location[0]
-        delta_x = -(obj1.location[0] - obj2.location[0])//32
-        delta_y = (obj1.size[1] + 10)//16
+        delta_x = -(obj1.location[0] - obj2.location[0])/32
+        delta_y = (obj1.size[1] + 10)/16
         delta_t = self.costs["swap"]/64
         for i in range(16):  # rising
             obj1.move(dy=delta_y)
@@ -301,7 +314,7 @@ class Array:
     def SelectionSort(self):
         """https://en.wikipedia.org/wiki/Selection_sort"""
         sorted_until = 0
-        while not self.sorted():
+        while sorted_until < self.length - 1:
             minimum_index = sorted_until
             self.move_to(sorted_until)
             while self.move_right():
@@ -311,38 +324,28 @@ class Array:
             sorted_until += 1
 
 
-a = Array(filepath="testdata1.txt")
+def example_sort(algorithm=0, datapath="testdata5.txt"):
+    a = Array(filepath=datapath)
+    if algorithm == 0:
+        a.GnomeSort()
+    if algorithm == 1:
+        a.BubbleSort()
+    if algorithm == 2:
+        a.SelectionSort()
+    if algorithm == 3:
+        a.MiracleSort()
+    if algorithm == 4:
+        a.BogoSort()
 
-# aa = pygame.Surface((123,123))
-# aa.fill((123,33,222))
 #
-
-a.update_screen()
-for idx1 in range(a.length):
-    for idx2 in range(a.length):
-        a.swap(idx1, idx2)
-#a.compare(1,3)
-#a.swap_animation(1,3)
-#a.SelectionSort()
-print(a.data)
-
-
-# b = Array(False, filepath="testdata3.txt")
-# b.start_timer()
-# b.GnomeSort()
-# print(b.read_timer())
-# b.fromFile("testdata3.txt")
-# b.start_timer()
-# b.SelectionSort()
-# print(b.read_timer())
+# t1 = threading.Thread(target=example_sort())
+# t2 = threading.Thread(target=example_sort())
+# t1.start()
+# t2.start()
 #
-
-# screen =pygame.Surface(size)
-# tmpelement = Element(10, (20,20))
-# screen.blit(tmpelement.surf, (10,10))
-# pygame.display.update()
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+#
+# while True:
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT:
+#             pygame.quit()
+#             sys.exit()

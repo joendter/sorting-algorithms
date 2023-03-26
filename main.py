@@ -75,7 +75,8 @@ class Array:
         self.costs: {str: int} = {"move": 0.3,
                                   "swap": 0.5,
                                   "shuffle": 1,
-                                  "compare": 0.3
+                                  "compare": 0.3,
+                                  "yeet":0.5
                                   }
         self.dimensions = (1024, 700)
         self.animated = animated
@@ -84,9 +85,10 @@ class Array:
 
 
     def initialise_pygame(self):
-        self.window = Window(title="array", size=self.dimensions)
-        self.renderer = Renderer(self.window)
-        self.surface = pygame.Surface(self.dimensions)
+        #self.window = Window(title="array", size=self.dimensions)
+        #self.renderer = Renderer(self.window)
+        self.screen = pygame.display.set_mode(self.dimensions)
+        self.surface = self.screen#pygame.Surface(self.dimensions)
         self.pygame_objects = []
         object_size = (self.dimensions[0]//self.length, self.dimensions[1]//4)
         self.pointy_thingy = pygame.Surface((40,40), pygame.SRCALPHA)
@@ -98,8 +100,7 @@ class Array:
         pygame.display.update()
 
     def update_screen(self):
-        Texture.from_surface(self.renderer, self.surface).draw()
-        self.renderer.present()
+        pygame.display.update()
 
     def draw_objects_on_surface(self):
         self.surface.fill((0, 0, 0))
@@ -162,11 +163,14 @@ class Array:
             return False
         self.draw_objects_on_surface()
         dimensions = (self.pygame_objects[idx1].size[0], self.dimensions[1])
-        tmp = pygame.Surface(dimensions)
-        tmp.fill((255, 255, 255))
-        tmp.set_alpha(40)
-        self.surface.blit(tmp, (self.pygame_objects[idx1].location[0], 0))
-        self.surface.blit(tmp, (self.pygame_objects[idx2].location[0], 0))
+        tmp1 = pygame.Surface(dimensions)
+        tmp1.fill((255*result, 255*(not result), 0))
+        tmp1.set_alpha(40)
+        tmp2 = pygame.Surface(dimensions)
+        tmp2.fill((255*(not result), 255*result, 0))
+        tmp2.set_alpha(40)
+        self.surface.blit(tmp1, (self.pygame_objects[idx1].location[0], 0))
+        self.surface.blit(tmp2, (self.pygame_objects[idx2].location[0], 0))
         #del tmp
         self.update_screen()
         time.sleep(self.costs["compare"])
@@ -284,6 +288,17 @@ class Array:
             self.swap(self.random_index(), self.random_index())
         self.debug_message("Shuffled")
 
+    def yeet(self, index):  # elementary; doesn't work nicely
+        self.data.pop(index)
+        if self.current_index >= index:
+            self.current_index -= 1
+        for i in range(32):
+            self.pygame_objects[index].move(dy=self.dimensions[1]/100)
+            self.draw_and_update()
+            time.sleep(self.costs["yeet"]/32)
+        self.pygame_objects.pop(index)
+        self.length -= 1
+
     def GnomeSort(self):
         """https://en.wikipedia.org/wiki/Gnome_sort"""
         self.move_to_start()
@@ -309,7 +324,7 @@ class Array:
     def MiracleSort(self):
         """https://en.wikipedia.org/wiki/Bogosort#Related_algorithms"""
         while not self.sorted():
-            time.sleep(1/random.random())
+            time.sleep(1)
 
     def BogoSort(self):
         """https://en.wikipedia.org/wiki/Bogosort"""
@@ -328,6 +343,14 @@ class Array:
             self.swap(minimum_index, sorted_until)
             sorted_until += 1
 
+    def StalinSort(self):
+        self.move_to_start()
+        while self.current_index < self.length - 1:
+            if self.compare_current_next():
+                self.yeet(self.current_index)
+            self.move_right()
+
+
 
 def example_sort(algorithm=0, datapath="testdata5.txt"):
     a = Array(filepath=datapath)
@@ -341,9 +364,12 @@ def example_sort(algorithm=0, datapath="testdata5.txt"):
         a.MiracleSort()
     if algorithm == 4:
         a.BogoSort()
+    if algorithm == 5:
+        a.StalinSort()
 
 
 debugarray = Array(animated=False,filepath="testdata5.txt")
+
 
 #
 # t1 = threading.Thread(target=example_sort())
